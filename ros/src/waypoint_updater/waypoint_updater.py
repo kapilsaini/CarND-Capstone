@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
+import numpy as np
 import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
+from scipy.spatial import KDTree
 
 import math
 
@@ -37,16 +39,54 @@ class WaypointUpdater(object):
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
 
         # TODO: Add other member variables you need below
+        self.pose = None
+        self.base_wps = None
+        self.wp_2d = None
+        self.wp_tree = None
+        self.loop()
 
         rospy.spin()
 
+    def loop(self):
+    	rate = rospy.Rate(50)
+    	while not rospy.is_Shutdown():
+    	    if self.pose and self.base_wps:
+    	        self.publish_waypoints(self.get_closest_wp_ndx())
+    	     rate.sleep()
+    	     
+    def get_closest_wp_ndx(self):
+        x = self.pose.pose.poistion.x
+        y = self.pose.pose.poistion.y
+        closest_ndx = self.wp_tree.query([x, y], 1)[1]
+        closest_coord = self.wp_2d[closest_ndx]
+        prev_coord = self.wp_2d[closest_ndx -1]
+        
+        cl_vect = np.array(closest_coord)
+        prev_vect = np.array(prev_coord)
+        pos_vect = np.array([x, y])
+        
+        val = np.dot(cl_vect - prev_vect, pos_vect - cl_vect)
+        if val > 0:
+          closest_ndx = (closest_ndx + 1) % len(self.wp_2d)
+       return closest_ndx
+    	
+    def publish_waypoints(self, closest_ndx):
+        lane = Lane()
+        lane.header = self.base_wps.header
+        lane.waypoints = self.base_wps.waypoints[closest_ndx: closest_ndx+LOOKAHEAD_WPS]
+        self.final_waypoints_pub.publish(lane)
+    
+    
     def pose_cb(self, msg):
         # TODO: Implement
         pass
 
     def waypoints_cb(self, waypoints):
         # TODO: Implement
-        pass
+        self.base_wps = waypoints
+        if not self.wp_2d:
+            self.wp_2d = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] for waypoint in waypoints.waypoint
+            self.wy_tree = KDTree(self.wp_2d)
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
