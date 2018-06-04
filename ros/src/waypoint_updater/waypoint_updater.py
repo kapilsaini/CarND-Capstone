@@ -45,18 +45,17 @@ class WaypointUpdater(object):
         self.wp_tree = None
         self.loop()
 
-        rospy.spin()
-
     def loop(self):
     	rate = rospy.Rate(50)
-    	while not rospy.is_Shutdown():
+    	while not rospy.is_shutdown():
     	    if self.pose and self.base_wps:
-    	        self.publish_waypoints(self.get_closest_wp_ndx())
-    	     rate.sleep()
+                cl_ndx = self.get_closest_wp_ndx()
+    	        self.publish_waypoints(cl_ndx)
+    	    rate.sleep()
     	     
     def get_closest_wp_ndx(self):
-        x = self.pose.pose.poistion.x
-        y = self.pose.pose.poistion.y
+        x = self.pose.pose.position.x
+        y = self.pose.pose.position.y
         closest_ndx = self.wp_tree.query([x, y], 1)[1]
         closest_coord = self.wp_2d[closest_ndx]
         prev_coord = self.wp_2d[closest_ndx -1]
@@ -68,7 +67,7 @@ class WaypointUpdater(object):
         val = np.dot(cl_vect - prev_vect, pos_vect - cl_vect)
         if val > 0:
           closest_ndx = (closest_ndx + 1) % len(self.wp_2d)
-       return closest_ndx
+        return closest_ndx
     	
     def publish_waypoints(self, closest_ndx):
         lane = Lane()
@@ -78,15 +77,13 @@ class WaypointUpdater(object):
     
     
     def pose_cb(self, msg):
-        # TODO: Implement
-        pass
+        self.pose = msg
 
     def waypoints_cb(self, waypoints):
-        # TODO: Implement
         self.base_wps = waypoints
         if not self.wp_2d:
-            self.wp_2d = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] for waypoint in waypoints.waypoint
-            self.wy_tree = KDTree(self.wp_2d)
+            self.wp_2d = [[waypoint.pose.pose.position.x, waypoint.pose.pose.position.y] for waypoint in waypoints.waypoints]
+            self.wp_tree = KDTree(self.wp_2d)
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
