@@ -57,15 +57,15 @@ class Controller(object):
         
         throttle = self.throttle_controller.step(vel_error, sample_time)
 
-        brake = 0
-        
+        brake = 0.0
        
-       # if linear_vel == 0.0 and current_vel < 0.1:
-       #     throttle = 0.0
-       #     brake = 0.0
+        if linear_vel == 0.0 and current_vel < 0.1:
+           throttle = 0.0
+           brake = 700
         
-       # elif throttle < 0.1 and vel_error < 0.0:
-       #     decel = max(vel_error, self.decel_limit)
-       #     brake = abs(decel)*self.vehicle_mass*self.wheel_radius
+        elif throttle < 0.1 and vel_error < 0.0:
+          throttle = 0
+          decel = max(vel_error, self.decel_limit)
+          brake = abs(decel)*self.vehicle_mass*self.wheel_radius
        
         return throttle, brake, steering
